@@ -5,14 +5,28 @@ import android.preference.PreferenceManager
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Button
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.simplifier.jetpackosm.ui.theme.JetpackOSMTheme
 import org.osmdroid.config.Configuration.*
@@ -29,10 +43,10 @@ import org.osmdroid.views.overlay.OverlayItem
 import org.osmdroid.views.overlay.Polyline
 import org.osmdroid.views.overlay.compass.CompassOverlay
 import org.osmdroid.views.overlay.compass.InternalCompassOrientationProvider
-import kotlin.math.abs
 
 
 class MainActivity : ComponentActivity() {
+    @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -46,6 +60,14 @@ class MainActivity : ComponentActivity() {
                     color = MaterialTheme.colorScheme.background
                 ) {
                     val context = LocalContext.current
+
+                    val startLocation = remember { mutableStateOf("") }
+                    val endLocation = remember { mutableStateOf("") }
+
+                    val buttonEnabled =
+                        remember { mutableStateOf(false) }
+
+                    val buttonText = remember { mutableStateOf("") }
 
                     val gumamelaCoordinate = GeoPoint(14.6792085, 120.9889662)
                     val bgcCoordinate = GeoPoint(14.546075468854076, 121.05393451469227)
@@ -133,6 +155,12 @@ class MainActivity : ComponentActivity() {
 
                     val mapEventsReceiver: MapEventsReceiver = object : MapEventsReceiver {
                         override fun singleTapConfirmedHelper(geoPoint: GeoPoint): Boolean {
+                            if (startLocation.value.isBlank()) {
+                                startLocation.value = "${geoPoint.latitude},${geoPoint.longitude}"
+                            } else {
+                                endLocation.value = "${geoPoint.latitude},${geoPoint.longitude}"
+                            }
+
                             // Handle tap event
                             val latitude = geoPoint.latitude
                             val longitude = geoPoint.longitude
@@ -152,17 +180,70 @@ class MainActivity : ComponentActivity() {
                     val mapEventsOverlay = MapEventsOverlay(mapEventsReceiver)
                     map.overlays.add(mapEventsOverlay)
 
+                    LaunchedEffect(key1 = startLocation.value, key2 = endLocation.value) {
+                        Log.i("ernesthor24", "onCreate: LaunchedEffect startLocation")
+                        buttonEnabled.value =
+                            startLocation.value.isNotBlank() && endLocation.value.isNotBlank()
+                        buttonText.value = if (startLocation.value.isBlank() && endLocation.value.isBlank()) {
+                            "Add Coordinates"
+                        } else {
+                            "Check Route"
+                        }
+                    }
 
                     Box(modifier = Modifier.fillMaxSize()) {
                         AndroidView(
-                            modifier = Modifier.fillMaxSize(), factory = {
+                            factory = {
                                 map
                             }
                         )
 
                         Column(
-                            modifier = Modifier.wrapContentSize()
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(Color.White)
+                                .padding(12.dp)
+                                .align(Alignment.BottomCenter),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
+                            OutlinedTextField(
+                                enabled = false,
+                                maxLines = 1,
+                                value = startLocation.value,
+                                onValueChange = {
+                                    startLocation.value = it
+                                })
+
+                            OutlinedTextField(
+                                enabled = false,
+                                maxLines = 1,
+                                value = endLocation.value,
+                                onValueChange = {
+                                    endLocation.value = it
+                                })
+
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Button(
+                                    modifier = Modifier.weight(1f),
+                                    onClick = {
+                                        startLocation.value = ""
+                                        endLocation.value = ""
+                                    }, enabled = buttonEnabled.value
+                                ) {
+                                    Text(text = "Clear")
+                                }
+
+                                Button(modifier = Modifier.weight(1f), onClick = {
+                                    map.invalidate()
+                                    //clear others
+                                }, enabled = buttonEnabled.value) {
+                                    Text(text = buttonText.value)
+                                }
+                            }
 
                         }
                     }
@@ -257,6 +338,6 @@ fun zoomOutToFitCoordinates(mapView: MapView, coordinate1: GeoPoint, coordinate2
     )
 
     mapView.post {
-        mapView.zoomToBoundingBox(boundingBox, true, 100)
+        mapView.zoomToBoundingBox(boundingBox, true, 150)
     }
 }
