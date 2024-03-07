@@ -129,8 +129,8 @@ fun StationScreen(mainViewModel: MainViewModel) {
                         mapsManager.addMarkerToMap(geoPoint, MarkerType.START)
                         Log.i("ernesthor24", "StationScreen: ${Gson().toJson(geoPoint)}")
                     }
-                    getBusStationsList().forEach {
-                        addMarkerToMap(it, MarkerType.STATIONS)
+                    getBusStationsList().forEachIndexed { index, stations ->
+                        addMarkerToMap(stations, MarkerType.STATIONS, getStationNames()[index])
                     }
                 }
 
@@ -200,6 +200,8 @@ fun StationScreen(mainViewModel: MainViewModel) {
                 }
 
                 Button(modifier = Modifier.weight(1f), onClick = {
+                    mapsManager.clearPolyline()
+                    mainViewModel.clearPolyline()
                     mainViewModel.findNearestStation(userCoordinate.value)
                 }, enabled = buttonsEnabled.value) {
                     Text(text = buttonText.value)
@@ -211,6 +213,34 @@ fun StationScreen(mainViewModel: MainViewModel) {
             LoadingOverlay()
         }
     }
+}
+
+
+
+fun getStationNames(): ArrayList<String> {
+        return arrayListOf(
+            "Monumento",
+            "Bagong Barrio",
+            "Munoz",
+            "Kaingin",
+            "North Avenue",
+            "Philam",
+            "Quezon Avenue",
+            "Nepa Q-Mart",
+            "Main Ave.",
+            "Santolan",
+            "Ortigas",
+            "Guadalupe",
+            "Buendia",
+            "Ayala",
+            "Tramo",
+            "Taft",
+            "Roxas Blvd.",
+            "MOA",
+            "Macapagal",
+            "COD/Manila Bay",
+            "PITX"
+        )
 }
 
 fun getBusStationsList(): ArrayList<GeoPoint> {

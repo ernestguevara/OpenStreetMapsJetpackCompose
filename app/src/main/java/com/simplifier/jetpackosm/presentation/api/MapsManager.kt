@@ -9,7 +9,8 @@ interface MapsManager {
 
     fun addMarkerToMap(
         coordinate: GeoPoint,
-        type: MarkerType
+        type: MarkerType,
+        title: String = ""
     )
 
     fun clearMarkersFromMap(shouldClearAll: Boolean = false, fromBus: Boolean = false)

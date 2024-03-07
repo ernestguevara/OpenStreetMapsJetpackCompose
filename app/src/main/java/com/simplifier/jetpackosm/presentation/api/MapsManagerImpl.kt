@@ -57,7 +57,8 @@ class MapsManagerImpl(private val context: Context, private val mapView: MapView
      */
     override fun addMarkerToMap(
         coordinate: GeoPoint,
-        type: MarkerType
+        type: MarkerType,
+        title: String
     ) {
         val marker = Marker(mapView)
         marker.position = coordinate
@@ -71,11 +72,11 @@ class MapsManagerImpl(private val context: Context, private val mapView: MapView
             }
 
             MarkerType.STATIONS -> {
-                "Station"
+                "Carousel Station"
             }
         }
 
-        marker.snippet = "${coordinate.latitude},${coordinate.longitude}"
+        marker.snippet = title.ifEmpty { "${coordinate.latitude},${coordinate.longitude}" }
         marker.relatedObject = type
         marker.icon =
             when (type) {
@@ -131,6 +132,7 @@ class MapsManagerImpl(private val context: Context, private val mapView: MapView
     override fun clearPolyline() {
         mapView.overlays.forEach {
             if (it is Polyline) {
+                it.infoWindow.close()
                 mapView.overlays.remove(it)
             }
         }
