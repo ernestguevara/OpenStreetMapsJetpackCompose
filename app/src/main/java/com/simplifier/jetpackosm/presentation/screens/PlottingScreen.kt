@@ -7,15 +7,10 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -29,18 +24,15 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.PointerEventPass
-import androidx.compose.ui.input.pointer.PointerInputChange
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.google.gson.Gson
 import com.simplifier.jetpackosm.presentation.MainViewModel
 import com.simplifier.jetpackosm.presentation.MapState
 import com.simplifier.jetpackosm.presentation.api.MapsManagerImpl
 import com.simplifier.jetpackosm.presentation.api.MarkerType
+import com.simplifier.jetpackosm.presentation.composables.LoadingOverlay
 import kotlinx.coroutines.launch
 import org.osmdroid.config.Configuration.*
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
@@ -237,44 +229,7 @@ fun PlottingScreen(mainViewModel: MainViewModel) {
         }
 
         if (mapStates.loading) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.5f))
-                    .pointerInput(Unit) {
-                        awaitPointerEventScope {
-                            while (true) {
-                                awaitPointerEvent(pass = PointerEventPass.Initial)
-                                    .changes
-                                    .forEach(PointerInputChange::consume)
-                            }
-                        }
-                    },
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
-            ) {
-                Column(
-                    modifier = Modifier
-                        .wrapContentSize()
-                        .background(Color.White)
-                        .padding(16.dp)
-                ) {
-                    CircularProgressIndicator(
-                        modifier = Modifier
-                            .size(64.dp),
-                        strokeWidth = 8.dp,
-                        color = Color.Black
-                    )
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Text(
-                        fontSize = 16.sp,
-                        text = "Loading..."
-                    )
-                }
-
-            }
+            LoadingOverlay()
         }
     }
 }

@@ -2,6 +2,7 @@ package com.simplifier.jetpackosm.data
 
 import com.simplifier.jetpackosm.domain.MapsRepository
 import com.simplifier.jetpackosm.domain.NearestModel
+import com.simplifier.jetpackosm.domain.NearestStationModel
 import com.simplifier.jetpackosm.domain.RoutesModel
 
 class MapsRepositoryImpl : MapsRepository {
@@ -29,6 +30,14 @@ class MapsRepositoryImpl : MapsRepository {
                 duration = 0.0,
                 distance = 0.0
             )
+        }
+    }
+
+    override suspend fun getNearestBusStation(combinedCoordinates: String): NearestStationModel {
+        return mapsApi.getNearestStation(combinedCoordinates)?.distances?.run {
+            NearestStationModel(this)
+        } ?: run {
+            NearestStationModel(emptyList())
         }
     }
 }

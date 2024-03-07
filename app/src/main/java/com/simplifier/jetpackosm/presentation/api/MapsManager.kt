@@ -12,7 +12,7 @@ interface MapsManager {
         type: MarkerType
     )
 
-    fun clearMarkersFromMap(shouldClearAll: Boolean = false)
+    fun clearMarkersFromMap(shouldClearAll: Boolean = false, fromBus: Boolean = false)
 
     fun clearPolyline()
 

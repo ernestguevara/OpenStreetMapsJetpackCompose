@@ -90,7 +90,7 @@ class MainActivity : ComponentActivity() {
                         }
 
                         composable("stations_screen") {
-                            StationScreen()
+                            StationScreen(mainViewModel)
                         }
                     }
                 }

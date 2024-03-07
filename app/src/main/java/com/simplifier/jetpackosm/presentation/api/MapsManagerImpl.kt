@@ -104,12 +104,19 @@ class MapsManagerImpl(private val context: Context, private val mapView: MapView
     /**
      * Clear markers
      */
-    override fun clearMarkersFromMap(shouldClearAll: Boolean) {
+    override fun clearMarkersFromMap(shouldClearAll: Boolean, fromBus: Boolean) {
         mapView.overlays.forEach {
             if (it is Marker) {
                 if (shouldClearAll || it.relatedObject == MarkerType.END) {
                     it.infoWindow.close()
                     mapView.overlays.remove(it)
+                }
+
+                if (fromBus) {
+                    if (it.relatedObject == MarkerType.START) {
+                        it.infoWindow.close()
+                        mapView.overlays.remove(it)
+                    }
                 }
             }
         }
@@ -143,7 +150,7 @@ class MapsManagerImpl(private val context: Context, private val mapView: MapView
         )
 
         mapView.post {
-            mapView.zoomToBoundingBox(boundingBox, true, 150)
+            mapView.zoomToBoundingBox(boundingBox, true, 100)
         }
     }
 }
