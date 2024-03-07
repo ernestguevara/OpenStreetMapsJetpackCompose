@@ -1,4 +1,4 @@
-package com.simplifier.jetpackosm.ui.theme
+package com.simplifier.jetpackosm.presentation.ui.theme
 
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle

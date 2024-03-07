@@ -1,4 +1,4 @@
-package com.simplifier.jetpackosm
+package com.simplifier.jetpackosm.presentation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope

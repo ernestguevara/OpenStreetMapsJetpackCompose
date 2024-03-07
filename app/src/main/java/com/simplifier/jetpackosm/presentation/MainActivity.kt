@@ -1,4 +1,4 @@
-package com.simplifier.jetpackosm
+package com.simplifier.jetpackosm.presentation
 
 import android.content.Context
 import android.os.Bundle
@@ -32,15 +32,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.google.gson.Gson
-import com.simplifier.jetpackosm.domain.RoutesModel
-import com.simplifier.jetpackosm.ui.theme.JetpackOSMTheme
-import io.ktor.util.reflect.instanceOf
+import com.simplifier.jetpackosm.presentation.ui.theme.JetpackOSMTheme
 import kotlinx.coroutines.launch
 import org.osmdroid.config.Configuration.*
 import org.osmdroid.events.MapEventsReceiver
@@ -129,6 +126,9 @@ class MainActivity : ComponentActivity() {
                                 /**
                                  * Add detailed route
                                  */
+                                /**
+                                 * Add detailed route
+                                 */
                                 scope.launch {
                                     val route = Polyline(map)
                                     mapStates.routesModel.coordinates.forEach { coordinates ->
@@ -158,10 +158,16 @@ class MainActivity : ComponentActivity() {
                                 /**
                                  * Init default zoom
                                  */
+                                /**
+                                 * Init default zoom
+                                 */
                                 val mapController = map.controller
                                 mapController.setZoom(18.5)
                                 mapController.setCenter(tower)
 
+                                /**
+                                 * Add compass
+                                 */
                                 /**
                                  * Add compass
                                  */
@@ -174,6 +180,9 @@ class MainActivity : ComponentActivity() {
                                 compassOverlay.enableCompass()
                                 map.overlays.add(compassOverlay)
 
+                                /**
+                                 * Get coordinate upon map tap
+                                 */
                                 /**
                                  * Get coordinate upon map tap
                                  */

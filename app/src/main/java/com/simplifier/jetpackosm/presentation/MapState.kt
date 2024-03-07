@@ -1,4 +1,4 @@
-package com.simplifier.jetpackosm
+package com.simplifier.jetpackosm.presentation
 
 import com.simplifier.jetpackosm.domain.RoutesModel
 

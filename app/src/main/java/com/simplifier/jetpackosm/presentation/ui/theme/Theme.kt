@@ -1,4 +1,4 @@
-package com.simplifier.jetpackosm.ui.theme
+package com.simplifier.jetpackosm.presentation.ui.theme
 
 import android.app.Activity
 import android.os.Build
