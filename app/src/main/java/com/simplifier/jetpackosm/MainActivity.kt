@@ -3,8 +3,10 @@ package com.simplifier.jetpackosm
 import android.content.Context
 import android.os.Bundle
 import android.preference.PreferenceManager
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.viewModels
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -20,6 +22,8 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -29,6 +33,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import com.google.gson.Gson
+import com.simplifier.jetpackosm.domain.RoutesModel
 import com.simplifier.jetpackosm.ui.theme.JetpackOSMTheme
 import kotlinx.coroutines.launch
 import org.osmdroid.config.Configuration.*
@@ -41,16 +47,19 @@ import org.osmdroid.views.CustomZoomButtonsController
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.MapEventsOverlay
 import org.osmdroid.views.overlay.Marker
+import org.osmdroid.views.overlay.Polyline
 import org.osmdroid.views.overlay.compass.CompassOverlay
 import org.osmdroid.views.overlay.compass.InternalCompassOrientationProvider
 
 
+const val TAG = "ernesthor24"
 class MainActivity : ComponentActivity() {
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         getInstance().load(this, PreferenceManager.getDefaultSharedPreferences(this))
+        val mainViewModel by viewModels<MainViewModel>()
 
         setContent {
             JetpackOSMTheme {
@@ -64,6 +73,9 @@ class MainActivity : ComponentActivity() {
                     val startLocation = remember { mutableStateOf("") }
                     val endLocation = remember { mutableStateOf("") }
 
+                    val startCoordinates = remember { mutableStateOf(GeoPoint(0.0, 0.0)) }
+                    val endCoordinates = remember { mutableStateOf(GeoPoint(0.0, 0.0)) }
+
                     val clearButtonEnabled = remember {
                         mutableStateOf(false)
                     }
@@ -76,21 +88,41 @@ class MainActivity : ComponentActivity() {
 
                     val scope = rememberCoroutineScope()
 
+
+                    val map = remember { MapView(context) }
+
+                    val routesModel: RoutesModel by mainViewModel.routesModel.collectAsState()
+
                     LaunchedEffect(key1 = startLocation.value, key2 = endLocation.value) {
+
                         clearButtonEnabled.value =
                             startLocation.value.isNotBlank() || endLocation.value.isNotBlank()
+
                         searchButtonEnabled.value =
                             startLocation.value.isNotBlank() && endLocation.value.isNotBlank()
+
                         buttonText.value =
-                            if (startLocation.value.isBlank() && endLocation.value.isBlank()) {
+                            if (startLocation.value.isBlank() || endLocation.value.isBlank()) {
                                 "Add Coordinates"
                             } else {
                                 "Check Route"
                             }
                     }
 
-
-                    val map = remember { MapView(context) }
+                    LaunchedEffect(routesModel) {
+                        Log.i("ernesthor24", "LaunchedEffect ${Gson().toJson(routesModel)}")
+                        /**
+                         * Add detailed route
+                         */
+                        scope.launch {
+                            val route = Polyline(map)
+                            routesModel.coordinates.forEachIndexed { index, coordinates ->
+                                route.addPoint(GeoPoint(coordinates[1], coordinates[0]))
+                            }
+                            map.overlays.add(route)
+                            map.invalidate()
+                        }
+                    }
 
                     Box(modifier = Modifier.fillMaxSize()) {
                         AndroidView(
@@ -132,10 +164,12 @@ class MainActivity : ComponentActivity() {
                                                 type = MarkerType.START
                                                 startLocation.value =
                                                     "${geoPoint.latitude},${geoPoint.longitude}"
+                                                startCoordinates.value = geoPoint
                                             } else {
                                                 type = MarkerType.END
                                                 endLocation.value =
                                                     "${geoPoint.latitude},${geoPoint.longitude}"
+                                                endCoordinates.value = geoPoint
                                             }
 
                                             scope.launch {
@@ -193,11 +227,12 @@ class MainActivity : ComponentActivity() {
                                     modifier = Modifier.weight(1f),
                                     onClick = {
                                         scope.launch {
-                                            //clear all overlays
                                             startLocation.value = ""
                                             endLocation.value = ""
 
+                                            //clear all overlays
                                             clearMarkersFromMap(map, true)
+                                            clearPolyline(map)
                                         }
 
                                     }, enabled = clearButtonEnabled.value
@@ -206,7 +241,10 @@ class MainActivity : ComponentActivity() {
                                 }
 
                                 Button(modifier = Modifier.weight(1f), onClick = {
-                                    //api call
+                                    mainViewModel.getRoutes(
+                                        startCoordinates.value,
+                                        endCoordinates.value
+                                    )
                                 }, enabled = searchButtonEnabled.value) {
                                     Text(text = buttonText.value)
                                 }
@@ -252,16 +290,6 @@ fun addMarkerToMap(
 
     mapView.overlays.add(marker)
     mapView.invalidate()
-
-    val markerOverlay = mutableListOf<Marker>()
-
-    for (overlay in mapView.overlays) {
-        if (overlay is Marker) {
-            markerOverlay.add(overlay)
-        }
-    }
-
-    mapView.invalidate()
 }
 
 fun clearMarkersFromMap(mapView: MapView, shouldClearAll: Boolean = false) {
@@ -283,6 +311,22 @@ fun clearMarkersFromMap(mapView: MapView, shouldClearAll: Boolean = false) {
     mapView.invalidate()
 }
 
+fun clearPolyline(mapView: MapView) {
+    val polylineOverlay = mutableListOf<Polyline>()
+
+    for (overlay in mapView.overlays) {
+        if (overlay is Polyline) {
+            polylineOverlay.add(overlay)
+        }
+    }
+
+    for (line in polylineOverlay) {
+        mapView.overlays.remove(line)
+    }
+
+    mapView.invalidate()
+}
+
 /**
  * Zoom depends on the bounds
  */
@@ -297,57 +341,4 @@ fun zoomOutToFitCoordinates(mapView: MapView, coordinate1: GeoPoint, coordinate2
     mapView.post {
         mapView.zoomToBoundingBox(boundingBox, true, 150)
     }
-}
-
-/**
- * Add detailed route
- */
-fun drawLine() {
-//    val route = Polyline(map)
-//    getWaypoints().forEach {
-//        line.addPoint(it)
-//    }
-//    map.overlays.add(route)
-}
-
-/**
- * Sample waypoint
- */
-
-private fun getWaypoints(): ArrayList<GeoPoint> {
-    val geoPoints: ArrayList<GeoPoint> = arrayListOf()
-
-    // Hardcoded array of coordinates
-    val coordinates = arrayOf(
-        doubleArrayOf(14.679103, 120.98906),
-        doubleArrayOf(14.676959, 120.98872),
-        doubleArrayOf(14.673748, 120.981743),
-        doubleArrayOf(14.661711, 120.984098),
-        doubleArrayOf(14.638781, 120.983308),
-        doubleArrayOf(14.632196, 120.980614),
-        doubleArrayOf(14.623724, 120.988979),
-        doubleArrayOf(14.613978, 120.988626),
-        doubleArrayOf(14.604906, 120.997285),
-        doubleArrayOf(14.597418, 121.001188),
-        doubleArrayOf(14.583511, 121.002083),
-        doubleArrayOf(14.577072, 120.996957),
-        doubleArrayOf(14.55766, 121.007383),
-        doubleArrayOf(14.561068, 121.015243),
-        doubleArrayOf(14.549633, 121.029854),
-        doubleArrayOf(14.547238, 121.035665),
-        doubleArrayOf(14.547615, 121.040638),
-        doubleArrayOf(14.545502, 121.0426),
-        doubleArrayOf(14.544814, 121.045706),
-        doubleArrayOf(14.542394, 121.04663)
-    )
-
-    // Create GeoPoints from the coordinates and add them to the ArrayList
-
-    // Create GeoPoints from the coordinates and add them to the ArrayList
-    for (coordinate in coordinates) {
-        val location = GeoPoint(coordinate[0], coordinate[1])
-        geoPoints.add(location)
-    }
-
-    return geoPoints
 }
