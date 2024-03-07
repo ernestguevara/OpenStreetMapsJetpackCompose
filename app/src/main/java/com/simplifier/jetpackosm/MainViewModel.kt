@@ -22,7 +22,9 @@ class MainViewModel : ViewModel() {
     ) {
         viewModelScope.launch {
             _mapStates.value = _mapStates.value.copy(
-                loading = true
+                loading = true,
+                isError = false,
+                errorMessage = ""
             )
 
             val finalStartCoordinate =
@@ -38,19 +40,17 @@ class MainViewModel : ViewModel() {
 
                 _mapStates.value = _mapStates.value.copy(
                     routesModel = mapsRepository.getRoutes(finalCoordinates),
+                    isError = false,
                     loading = false,
                     errorMessage = ""
                 )
             } else {
                 _mapStates.value = _mapStates.value.copy(
-                    loading = true,
+                    loading = false,
+                    isError = true,
                     errorMessage = "Cant parse anything"
                 )
             }
-
-            _mapStates.value = _mapStates.value.copy(
-                loading = false
-            )
         }
     }
 

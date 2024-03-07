@@ -114,20 +114,21 @@ class MainActivity : ComponentActivity() {
                             }
                     }
 
-                    if (mapStates.isError) {
-                        Toast.makeText(context, mapStates.errorMessage, Toast.LENGTH_SHORT)
-                            .show()
-                    }
 
                     LaunchedEffect(mapStates) {
                         Log.i("ernesthor24", "LaunchedEffect ${Gson().toJson(mapStates)}")
 
                         when {
+                            mapStates.isError -> {
+                                Log.i("ernesthor24", "went here toast")
+                                Toast.makeText(context, mapStates.errorMessage, Toast.LENGTH_SHORT)
+                                    .show()
+                            }
+
                             mapStates.routesModel.coordinates.isNotEmpty() -> {
                                 /**
                                  * Add detailed route
                                  */
-
                                 scope.launch {
                                     val route = Polyline(map)
                                     mapStates.routesModel.coordinates.forEach { coordinates ->
