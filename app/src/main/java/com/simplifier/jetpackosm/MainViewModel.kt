@@ -13,15 +13,17 @@ class MainViewModel : ViewModel() {
 
     private val mapsRepository = MapsRepositoryImpl()
 
-    private val _routesModel = MutableStateFlow(RoutesModel(emptyList(), 0.0, 0.0))
-    val routesModel: StateFlow<RoutesModel> = _routesModel
+    private val _mapStates = MutableStateFlow(MapState())
+    val mapStates: StateFlow<MapState> = _mapStates
 
     fun getRoutes(
         startCoordinates: GeoPoint,
         endCoordinates: GeoPoint
     ) {
         viewModelScope.launch {
-            //trigger loading
+            _mapStates.value = _mapStates.value.copy(
+                loading = true
+            )
 
             val finalStartCoordinate =
                 mapsRepository.getNearest("${startCoordinates.longitude},${startCoordinates.latitude}")
@@ -34,8 +36,27 @@ class MainViewModel : ViewModel() {
                     "${finalStartCoordinate.nearestGpsData.first().second[0]},${finalStartCoordinate.nearestGpsData.first().second[1]};" +
                             "${finalEndCoordinate.nearestGpsData.first().second[0]},${finalEndCoordinate.nearestGpsData.first().second[1]}"
 
-                _routesModel.value = mapsRepository.getRoutes(finalCoordinates)
+                _mapStates.value = _mapStates.value.copy(
+                    routesModel = mapsRepository.getRoutes(finalCoordinates),
+                    loading = false,
+                    errorMessage = ""
+                )
+            } else {
+                _mapStates.value = _mapStates.value.copy(
+                    loading = true,
+                    errorMessage = "Cant parse anything"
+                )
             }
+
+            _mapStates.value = _mapStates.value.copy(
+                loading = false
+            )
         }
+    }
+
+    fun clearPolyline() {
+        _mapStates.value = _mapStates.value.copy(
+            routesModel = RoutesModel(emptyList(), 0.0, 0.0)
+        )
     }
 }

@@ -4,6 +4,7 @@ import android.content.Context
 import android.os.Bundle
 import android.preference.PreferenceManager
 import android.util.Log
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
@@ -15,7 +16,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -29,6 +32,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -36,6 +40,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import com.google.gson.Gson
 import com.simplifier.jetpackosm.domain.RoutesModel
 import com.simplifier.jetpackosm.ui.theme.JetpackOSMTheme
+import io.ktor.util.reflect.instanceOf
 import kotlinx.coroutines.launch
 import org.osmdroid.config.Configuration.*
 import org.osmdroid.events.MapEventsReceiver
@@ -53,6 +58,7 @@ import org.osmdroid.views.overlay.compass.InternalCompassOrientationProvider
 
 
 const val TAG = "ernesthor24"
+
 class MainActivity : ComponentActivity() {
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -88,10 +94,9 @@ class MainActivity : ComponentActivity() {
 
                     val scope = rememberCoroutineScope()
 
-
                     val map = remember { MapView(context) }
 
-                    val routesModel: RoutesModel by mainViewModel.routesModel.collectAsState()
+                    val mapStates: MapState by mainViewModel.mapStates.collectAsState()
 
                     LaunchedEffect(key1 = startLocation.value, key2 = endLocation.value) {
 
@@ -109,18 +114,33 @@ class MainActivity : ComponentActivity() {
                             }
                     }
 
-                    LaunchedEffect(routesModel) {
-                        Log.i("ernesthor24", "LaunchedEffect ${Gson().toJson(routesModel)}")
-                        /**
-                         * Add detailed route
-                         */
-                        scope.launch {
-                            val route = Polyline(map)
-                            routesModel.coordinates.forEachIndexed { index, coordinates ->
-                                route.addPoint(GeoPoint(coordinates[1], coordinates[0]))
+                    if (mapStates.isError) {
+                        Toast.makeText(context, mapStates.errorMessage, Toast.LENGTH_SHORT)
+                            .show()
+                    }
+
+                    LaunchedEffect(mapStates) {
+                        Log.i("ernesthor24", "LaunchedEffect ${Gson().toJson(mapStates)}")
+
+                        when {
+                            mapStates.routesModel.coordinates.isNotEmpty() -> {
+                                /**
+                                 * Add detailed route
+                                 */
+
+                                scope.launch {
+                                    val route = Polyline(map)
+                                    mapStates.routesModel.coordinates.forEach { coordinates ->
+                                        route.addPoint(GeoPoint(coordinates[1], coordinates[0]))
+                                    }
+                                    map.overlays.add(route)
+                                    map.invalidate()
+                                }
                             }
-                            map.overlays.add(route)
-                            map.invalidate()
+
+                            else -> {
+                                //do nothing
+                            }
                         }
                     }
 
@@ -232,6 +252,8 @@ class MainActivity : ComponentActivity() {
 
                                             //clear all overlays
                                             clearMarkersFromMap(map, true)
+
+                                            mainViewModel.clearPolyline()
                                             clearPolyline(map)
                                         }
 
@@ -250,6 +272,22 @@ class MainActivity : ComponentActivity() {
                                 }
                             }
 
+                        }
+
+                        if (mapStates.loading) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(Color.Black.copy(alpha = 0.5f)),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center
+                            ) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier
+                                        .size(48.dp),
+                                    strokeWidth = 2.dp,
+                                )
+                            }
                         }
                     }
                 }
