@@ -14,6 +14,8 @@ import org.osmdroid.views.overlay.compass.InternalCompassOrientationProvider
 
 class MapsManagerImpl(private val context: Context, private val mapView: MapView) : MapsManager {
 
+    val tower = GeoPoint(14.5862583, 121.0595029, 17.0)
+
     /**
      * Add compass
      */
@@ -27,6 +29,7 @@ class MapsManagerImpl(private val context: Context, private val mapView: MapView
         compassOverlay.enableCompass()
         mapView.overlays.add(compassOverlay)
     }
+
     /**
      * Get coordinate upon map tap
      */
@@ -58,18 +61,36 @@ class MapsManagerImpl(private val context: Context, private val mapView: MapView
     ) {
         val marker = Marker(mapView)
         marker.position = coordinate
-        marker.title = if (type == MarkerType.START) {
-            "Start Destination"
-        } else {
-            "End Destination"
+        marker.title = when (type) {
+            MarkerType.START -> {
+                "Start Destination"
+            }
+
+            MarkerType.END -> {
+                "End Destination"
+            }
+
+            MarkerType.STATIONS -> {
+                "Station"
+            }
         }
+
         marker.snippet = "${coordinate.latitude},${coordinate.longitude}"
         marker.relatedObject = type
-        marker.icon = if (type == MarkerType.START) {
-            context.getDrawable(R.drawable.person)
-        } else {
-            context.getDrawable(R.drawable.marker_default)
-        }
+        marker.icon =
+            when (type) {
+                MarkerType.START -> {
+                    context.getDrawable(R.drawable.person)
+                }
+
+                MarkerType.END -> {
+                    context.getDrawable(R.drawable.marker_default)
+                }
+
+                MarkerType.STATIONS -> {
+                    context.getDrawable(R.drawable.marker_default_focused_base)
+                }
+            }
         marker.setOnMarkerClickListener { marker, mapView ->
             marker.showInfoWindow()
             true

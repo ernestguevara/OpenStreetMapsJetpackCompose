@@ -21,5 +21,6 @@ interface MapsManager {
 
 enum class MarkerType {
     START,
-    END
+    END,
+    STATIONS
 }

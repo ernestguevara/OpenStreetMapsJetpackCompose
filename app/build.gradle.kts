@@ -61,18 +61,21 @@ dependencies {
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3")
 
+    val ktor_version = "1.6.3"
+    implementation("io.ktor:ktor-client-core:$ktor_version")
+    implementation("io.ktor:ktor-client-android:$ktor_version")
+    implementation("io.ktor:ktor-client-serialization:$ktor_version")
+    implementation("io.ktor:ktor-client-logging:$ktor_version")
+
+    val nav_version = "2.7.7"
+    implementation("androidx.navigation:navigation-compose:$nav_version")
+
     val osm_version = "6.1.18"
 
     implementation("org.osmdroid:osmdroid-android:$osm_version")
     implementation("org.osmdroid:osmdroid-shape:$osm_version")
 
     implementation("com.google.code.gson:gson:2.10.1")
-
-    val ktor_version = "1.6.3"
-    implementation("io.ktor:ktor-client-core:$ktor_version")
-    implementation("io.ktor:ktor-client-android:$ktor_version")
-    implementation("io.ktor:ktor-client-serialization:$ktor_version")
-    implementation("io.ktor:ktor-client-logging:$ktor_version")
 
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
