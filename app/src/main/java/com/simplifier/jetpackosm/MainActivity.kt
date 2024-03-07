@@ -1,8 +1,8 @@
 package com.simplifier.jetpackosm
 
+import android.content.Context
 import android.os.Bundle
 import android.preference.PreferenceManager
-import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
@@ -22,6 +22,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -29,18 +30,17 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.simplifier.jetpackosm.ui.theme.JetpackOSMTheme
+import kotlinx.coroutines.launch
 import org.osmdroid.config.Configuration.*
 import org.osmdroid.events.MapEventsReceiver
+import org.osmdroid.library.R
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.BoundingBox
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.CustomZoomButtonsController
 import org.osmdroid.views.MapView
-import org.osmdroid.views.overlay.ItemizedIconOverlay
-import org.osmdroid.views.overlay.ItemizedOverlayWithFocus
 import org.osmdroid.views.overlay.MapEventsOverlay
-import org.osmdroid.views.overlay.OverlayItem
-import org.osmdroid.views.overlay.Polyline
+import org.osmdroid.views.overlay.Marker
 import org.osmdroid.views.overlay.compass.CompassOverlay
 import org.osmdroid.views.overlay.compass.InternalCompassOrientationProvider
 
@@ -64,136 +64,98 @@ class MainActivity : ComponentActivity() {
                     val startLocation = remember { mutableStateOf("") }
                     val endLocation = remember { mutableStateOf("") }
 
-                    val buttonEnabled =
+                    val clearButtonEnabled = remember {
+                        mutableStateOf(false)
+                    }
+                    val searchButtonEnabled =
                         remember { mutableStateOf(false) }
 
                     val buttonText = remember { mutableStateOf("") }
 
-                    val gumamelaCoordinate = GeoPoint(14.6792085, 120.9889662)
-                    val bgcCoordinate = GeoPoint(14.546075468854076, 121.05393451469227)
+                    val tower = GeoPoint(14.5862583, 121.0595029, 17.0)
 
-//                    val gumamelaCoordinate = GeoPoint(14.6183922, 120.9783989)
-//                    val bgcCoordinate = GeoPoint(13.0882396, 123.6723769)
-
-                    /**
-                     * Init map
-                     */
-                    val map = MapView(context).apply {
-                        setTileSource(TileSourceFactory.MAPNIK)
-                        zoomController.setVisibility(CustomZoomButtonsController.Visibility.NEVER)
-                        setMultiTouchControls(true)
-                    }
-
-                    /**
-                     * Init default zoom
-                     */
-                    val mapController = map.controller
-                    mapController.setZoom(18.5)
-                    mapController.setCenter(gumamelaCoordinate)
-
-                    /**
-                     * Add compass
-                     */
-                    val compassOverlay =
-                        CompassOverlay(context, InternalCompassOrientationProvider(context), map)
-                    compassOverlay.enableCompass()
-                    map.overlays.add(compassOverlay)
-
-
-                    /**
-                     * Add pin overlay
-                     */
-                    //your items
-//                    val items = ArrayList<OverlayItem>()
-//                    items.add(OverlayItem("Start", "Valenzuela", gumamelaCoordinate))
-//                    items.add(OverlayItem("Finish", "BGC", bgcCoordinate))
-//
-//                    zoomOutToFitCoordinates(map, gumamelaCoordinate, bgcCoordinate)
-//
-//                    val pinOverlay = ItemizedOverlayWithFocus(items, object :
-//                        ItemizedIconOverlay.OnItemGestureListener<OverlayItem> {
-//                        override fun onItemSingleTapUp(index: Int, item: OverlayItem): Boolean {
-//                            Log.i("ernesthor24", "onItemSingleTapUp: ")
-//                            //do something
-//                            return true
-//                        }
-//
-//                        override fun onItemLongPress(index: Int, item: OverlayItem): Boolean {
-//                            Log.i("ernesthor24", "onItemLongPress: ")
-//                            return true
-//                        }
-//                    }, context)
-//                    pinOverlay.setFocusItemsOnTap(true)
-//
-//                    map.overlays.add(pinOverlay)
-
-                    //new
-                    addMarkerToMap(map, "Start", "Valenzuela", gumamelaCoordinate)
-                    addMarkerToMap(map, "Finish", "BGC", bgcCoordinate)
-                    zoomOutToFitCoordinates(map, gumamelaCoordinate, bgcCoordinate)
-
-                    /**
-                     * Add line overlay
-                     */
-                    val line = Polyline(map)
-                    line.addPoint(gumamelaCoordinate)
-                    line.addPoint(bgcCoordinate)
-                    map.overlays.add(line)
-
-                    /**
-                     * Add detailed route
-                     */
-                    val route = Polyline(map)
-                    getWaypoints().forEach {
-                        line.addPoint(it)
-                    }
-                    map.overlays.add(route)
-
-                    /**
-                     * Get coordinate
-                     */
-
-                    val mapEventsReceiver: MapEventsReceiver = object : MapEventsReceiver {
-                        override fun singleTapConfirmedHelper(geoPoint: GeoPoint): Boolean {
-                            if (startLocation.value.isBlank()) {
-                                startLocation.value = "${geoPoint.latitude},${geoPoint.longitude}"
-                            } else {
-                                endLocation.value = "${geoPoint.latitude},${geoPoint.longitude}"
-                            }
-
-                            // Handle tap event
-                            val latitude = geoPoint.latitude
-                            val longitude = geoPoint.longitude
-//                            clearMarkersFromMap(map)
-                            addMarkerToMap(map, "Tap", "Coordinate", geoPoint)
-                            Log.d("TapCoordinate", "Latitude: $latitude, Longitude: $longitude")
-                            return true
-                        }
-
-                        override fun longPressHelper(geoPoint: GeoPoint): Boolean {
-                            // Long press event
-                            return true
-                        }
-                    }
-
-                    // Add map events overlay to the map view
-                    val mapEventsOverlay = MapEventsOverlay(mapEventsReceiver)
-                    map.overlays.add(mapEventsOverlay)
+                    val scope = rememberCoroutineScope()
 
                     LaunchedEffect(key1 = startLocation.value, key2 = endLocation.value) {
-                        Log.i("ernesthor24", "onCreate: LaunchedEffect startLocation")
-                        buttonEnabled.value =
+                        clearButtonEnabled.value =
+                            startLocation.value.isNotBlank() || endLocation.value.isNotBlank()
+                        searchButtonEnabled.value =
                             startLocation.value.isNotBlank() && endLocation.value.isNotBlank()
-                        buttonText.value = if (startLocation.value.isBlank() && endLocation.value.isBlank()) {
-                            "Add Coordinates"
-                        } else {
-                            "Check Route"
-                        }
+                        buttonText.value =
+                            if (startLocation.value.isBlank() && endLocation.value.isBlank()) {
+                                "Add Coordinates"
+                            } else {
+                                "Check Route"
+                            }
                     }
+
+
+                    val map = remember { MapView(context) }
 
                     Box(modifier = Modifier.fillMaxSize()) {
                         AndroidView(
                             factory = {
+                                map.apply {
+                                    setTileSource(TileSourceFactory.MAPNIK)
+                                    zoomController.setVisibility(CustomZoomButtonsController.Visibility.NEVER)
+                                    setMultiTouchControls(true)
+                                }
+
+
+                                /**
+                                 * Init default zoom
+                                 */
+                                val mapController = map.controller
+                                mapController.setZoom(18.5)
+                                mapController.setCenter(tower)
+
+                                /**
+                                 * Add compass
+                                 */
+                                val compassOverlay =
+                                    CompassOverlay(
+                                        context,
+                                        InternalCompassOrientationProvider(context),
+                                        map
+                                    )
+                                compassOverlay.enableCompass()
+                                map.overlays.add(compassOverlay)
+
+                                /**
+                                 * Get coordinate upon map tap
+                                 */
+                                val mapEventsReceiver: MapEventsReceiver =
+                                    object : MapEventsReceiver {
+                                        override fun singleTapConfirmedHelper(geoPoint: GeoPoint): Boolean {
+                                            val type: MarkerType
+                                            if (startLocation.value.isBlank()) {
+                                                type = MarkerType.START
+                                                startLocation.value =
+                                                    "${geoPoint.latitude},${geoPoint.longitude}"
+                                            } else {
+                                                type = MarkerType.END
+                                                endLocation.value =
+                                                    "${geoPoint.latitude},${geoPoint.longitude}"
+                                            }
+
+                                            scope.launch {
+                                                clearMarkersFromMap(map)
+                                                addMarkerToMap(context, map, geoPoint, type)
+                                            }
+
+                                            return true
+                                        }
+
+                                        override fun longPressHelper(geoPoint: GeoPoint): Boolean {
+                                            // Long press event
+                                            return true
+                                        }
+                                    }
+
+                                // Add map events overlay to the map view
+                                val mapEventsOverlay = MapEventsOverlay(mapEventsReceiver)
+                                map.overlays.add(mapEventsOverlay)
+
                                 map
                             }
                         )
@@ -230,17 +192,22 @@ class MainActivity : ComponentActivity() {
                                 Button(
                                     modifier = Modifier.weight(1f),
                                     onClick = {
-                                        startLocation.value = ""
-                                        endLocation.value = ""
-                                    }, enabled = buttonEnabled.value
+                                        scope.launch {
+                                            //clear all overlays
+                                            startLocation.value = ""
+                                            endLocation.value = ""
+
+                                            clearMarkersFromMap(map, true)
+                                        }
+
+                                    }, enabled = clearButtonEnabled.value
                                 ) {
                                     Text(text = "Clear")
                                 }
 
                                 Button(modifier = Modifier.weight(1f), onClick = {
-                                    map.invalidate()
-                                    //clear others
-                                }, enabled = buttonEnabled.value) {
+                                    //api call
+                                }, enabled = searchButtonEnabled.value) {
                                     Text(text = buttonText.value)
                                 }
                             }
@@ -252,6 +219,100 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
+
+enum class MarkerType {
+    START,
+    END
+}
+
+fun addMarkerToMap(
+    context: Context,
+    mapView: MapView,
+    coordinate: GeoPoint,
+    type: MarkerType
+) {
+    val marker = Marker(mapView)
+    marker.position = coordinate
+    marker.title = if (type == MarkerType.START) {
+        "Start Destination"
+    } else {
+        "End Destination"
+    }
+    marker.snippet = "${coordinate.latitude},${coordinate.longitude}"
+    marker.relatedObject = type
+    marker.icon = if (type == MarkerType.START) {
+        context.getDrawable(R.drawable.person)
+    } else {
+        context.getDrawable(R.drawable.marker_default)
+    }
+    marker.setOnMarkerClickListener { marker, mapView ->
+        marker.showInfoWindow()
+        true
+    }
+
+    mapView.overlays.add(marker)
+    mapView.invalidate()
+
+    val markerOverlay = mutableListOf<Marker>()
+
+    for (overlay in mapView.overlays) {
+        if (overlay is Marker) {
+            markerOverlay.add(overlay)
+        }
+    }
+
+    mapView.invalidate()
+}
+
+fun clearMarkersFromMap(mapView: MapView, shouldClearAll: Boolean = false) {
+    val markerOverlay = mutableListOf<Marker>()
+
+    for (overlay in mapView.overlays) {
+        if (overlay is Marker) {
+            markerOverlay.add(overlay)
+        }
+    }
+
+    for (marker in markerOverlay) {
+        if (shouldClearAll || marker.relatedObject == MarkerType.END) {
+            marker.infoWindow.close()
+            mapView.overlays.remove(marker)
+        }
+    }
+
+    mapView.invalidate()
+}
+
+/**
+ * Zoom depends on the bounds
+ */
+fun zoomOutToFitCoordinates(mapView: MapView, coordinate1: GeoPoint, coordinate2: GeoPoint) {
+    val boundingBox = BoundingBox(
+        coordinate1.latitude,
+        coordinate2.longitude,
+        coordinate2.latitude,
+        coordinate1.longitude
+    )
+
+    mapView.post {
+        mapView.zoomToBoundingBox(boundingBox, true, 150)
+    }
+}
+
+/**
+ * Add detailed route
+ */
+fun drawLine() {
+//    val route = Polyline(map)
+//    getWaypoints().forEach {
+//        line.addPoint(it)
+//    }
+//    map.overlays.add(route)
+}
+
+/**
+ * Sample waypoint
+ */
 
 private fun getWaypoints(): ArrayList<GeoPoint> {
     val geoPoints: ArrayList<GeoPoint> = arrayListOf()
@@ -289,55 +350,4 @@ private fun getWaypoints(): ArrayList<GeoPoint> {
     }
 
     return geoPoints
-}
-
-fun addMarkerToMap(mapView: MapView, title: String, snippet: String, coordinate: GeoPoint) {
-    val items = ArrayList<OverlayItem>()
-    items.add(OverlayItem(title, snippet, coordinate))
-
-    val pinOverlay = ItemizedOverlayWithFocus(items, object :
-        ItemizedIconOverlay.OnItemGestureListener<OverlayItem> {
-        override fun onItemSingleTapUp(index: Int, item: OverlayItem): Boolean {
-            // Handle single tap on the marker
-            Log.i("ernesthor24", "onItemSingleTapUp: addMarkerToMap")
-            return true
-        }
-
-        override fun onItemLongPress(index: Int, item: OverlayItem): Boolean {
-            // Handle long press on the marker
-            Log.i("ernesthor24", "onItemLongPress: addMarkerToMap")
-            return true
-        }
-    }, mapView.context)
-    pinOverlay.setFocusItemsOnTap(true)
-
-    mapView.overlays.add(pinOverlay)
-}
-
-fun clearMarkersFromMap(mapView: MapView) {
-    val overlaysToRemove = mutableListOf<ItemizedOverlayWithFocus<*>?>()
-    for (overlay in mapView.overlays) {
-        if (overlay is ItemizedOverlayWithFocus<*>) {
-            overlaysToRemove.add(overlay)
-        }
-    }
-    for (overlay in overlaysToRemove) {
-        mapView.overlays.remove(overlay)
-    }
-}
-
-/**
- * Zoom depends on the bounds
- */
-fun zoomOutToFitCoordinates(mapView: MapView, coordinate1: GeoPoint, coordinate2: GeoPoint) {
-    val boundingBox = BoundingBox(
-        coordinate1.latitude,
-        coordinate2.longitude,
-        coordinate2.latitude,
-        coordinate1.longitude
-    )
-
-    mapView.post {
-        mapView.zoomToBoundingBox(boundingBox, true, 150)
-    }
 }
