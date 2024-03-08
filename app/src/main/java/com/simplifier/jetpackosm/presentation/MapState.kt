@@ -7,4 +7,5 @@ data class MapState(
     var isError: Boolean = false,
     var errorMessage: String = "",
     var routesModel: RoutesModel = RoutesModel(emptyList(), 0.0, 0.0),
+    var stationIndex: Int = 0
 )

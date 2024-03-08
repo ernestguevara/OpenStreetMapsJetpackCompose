@@ -33,6 +33,8 @@ import com.simplifier.jetpackosm.presentation.MapState
 import com.simplifier.jetpackosm.presentation.api.MapsManagerImpl
 import com.simplifier.jetpackosm.presentation.api.MarkerType
 import com.simplifier.jetpackosm.presentation.composables.LoadingOverlay
+import com.simplifier.jetpackosm.presentation.util.convertDistance
+import com.simplifier.jetpackosm.presentation.util.convertTime
 import kotlinx.coroutines.launch
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.BoundingBox
@@ -56,6 +58,9 @@ fun StationScreen(mainViewModel: MainViewModel) {
     val buttonsEnabled = remember {
         mutableStateOf(false)
     }
+
+    val isPlotted =
+        remember { mutableStateOf(false) }
 
     val buttonText = remember {
         mutableStateOf("")
@@ -96,6 +101,8 @@ fun StationScreen(mainViewModel: MainViewModel) {
                  * Add detailed route to the nearest station
                  */
                 scope.launch {
+                    isPlotted.value = true
+
                     val route = Polyline(map)
                     mapStates.routesModel.coordinates.forEach { coordinates ->
                         route.addPoint(GeoPoint(coordinates[1], coordinates[0]))
@@ -127,7 +134,6 @@ fun StationScreen(mainViewModel: MainViewModel) {
                         userCoordinate.value = geoPoint
                         mapsManager.clearMarkersFromMap(fromBus = true)
                         mapsManager.addMarkerToMap(geoPoint, MarkerType.START)
-                        Log.i("ernesthor24", "StationScreen: ${Gson().toJson(geoPoint)}")
                     }
                     getBusStationsList().forEachIndexed { index, stations ->
                         addMarkerToMap(stations, MarkerType.STATIONS, getStationNames()[index])
@@ -159,23 +165,53 @@ fun StationScreen(mainViewModel: MainViewModel) {
             horizontalAlignment = Alignment.Start,
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Text(
-                modifier = Modifier
-                    .fillMaxWidth(),
-                text = "Tap inside the map to input your location"
-            )
+            if (isPlotted.value) {
+                Text(
+                    modifier = Modifier
+                        .fillMaxWidth(),
+                    text = "Nearest Station is ${getStationNames()[mapStates.stationIndex]}"
+                )
 
-            OutlinedTextField(modifier = Modifier
-                .fillMaxWidth(),
-                supportingText = {
-                    Text(text = "User Location")
-                },
-                readOnly = true,
-                maxLines = 1,
-                value = userLocation.value,
-                onValueChange = {
-                    userLocation.value = it
-                })
+                OutlinedTextField(modifier = Modifier
+                    .fillMaxWidth(),
+                    supportingText = {
+                        Text(text = "Distance to station")
+                    },
+                    readOnly = true,
+                    maxLines = 1,
+                    value = mapStates.routesModel.distance.convertDistance(),
+                    onValueChange = {})
+
+                OutlinedTextField(modifier = Modifier
+                    .fillMaxWidth(),
+                    supportingText = {
+                        Text(text = "ETA to station")
+                    },
+                    readOnly = true,
+                    maxLines = 1,
+                    value = mapStates.routesModel.duration.convertTime(),
+                    onValueChange = {})
+
+            } else {
+                Text(
+                    modifier = Modifier
+                        .fillMaxWidth(),
+                    text = "Tap inside the map to input your location"
+                )
+
+                OutlinedTextField(modifier = Modifier
+                    .fillMaxWidth(),
+                    supportingText = {
+                        Text(text = "User Location")
+                    },
+                    readOnly = true,
+                    maxLines = 1,
+                    value = userLocation.value,
+                    onValueChange = {
+                        userLocation.value = it
+                    })
+            }
+
 
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -186,6 +222,7 @@ fun StationScreen(mainViewModel: MainViewModel) {
                     onClick = {
                         scope.launch {
                             userLocation.value = ""
+                            isPlotted.value = false
 
                             //clear all overlays
                             mapsManager.clearMarkersFromMap(fromBus = true)

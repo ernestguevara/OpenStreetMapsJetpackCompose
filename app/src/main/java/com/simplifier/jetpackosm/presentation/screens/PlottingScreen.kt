@@ -33,6 +33,8 @@ import com.simplifier.jetpackosm.presentation.MapState
 import com.simplifier.jetpackosm.presentation.api.MapsManagerImpl
 import com.simplifier.jetpackosm.presentation.api.MarkerType
 import com.simplifier.jetpackosm.presentation.composables.LoadingOverlay
+import com.simplifier.jetpackosm.presentation.util.convertDistance
+import com.simplifier.jetpackosm.presentation.util.convertTime
 import kotlinx.coroutines.launch
 import org.osmdroid.config.Configuration.*
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
@@ -55,7 +57,11 @@ fun PlottingScreen(mainViewModel: MainViewModel) {
     val clearButtonEnabled = remember {
         mutableStateOf(false)
     }
+
     val searchButtonEnabled =
+        remember { mutableStateOf(false) }
+
+    val isPlotted =
         remember { mutableStateOf(false) }
 
     val buttonText = remember { mutableStateOf("") }
@@ -97,6 +103,8 @@ fun PlottingScreen(mainViewModel: MainViewModel) {
                  * Add detailed route
                  */
                 scope.launch {
+                    isPlotted.value = true
+
                     val route = Polyline(map)
                     mapStates.routesModel.coordinates.forEach { coordinates ->
                         route.addPoint(GeoPoint(coordinates[1], coordinates[0]))
@@ -163,35 +171,65 @@ fun PlottingScreen(mainViewModel: MainViewModel) {
             horizontalAlignment = Alignment.Start,
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Text(
-                modifier = Modifier
+            if (isPlotted.value) {
+                Text(
+                    modifier = Modifier
+                        .fillMaxWidth(),
+                    text = "Route information"
+                )
+
+                OutlinedTextField(modifier = Modifier
                     .fillMaxWidth(),
-                text = "Tap inside the map to input coordinates"
-            )
+                    supportingText = {
+                        Text(text = "Distance")
+                    },
+                    readOnly = true,
+                    maxLines = 1,
+                    value = mapStates.routesModel.distance.convertDistance(),
+                    onValueChange = {})
 
-            OutlinedTextField(modifier = Modifier
-                .fillMaxWidth(),
-                supportingText = {
-                    Text(text = "Start Coordinates")
-                },
-                readOnly = true,
-                maxLines = 1,
-                value = startLocation.value,
-                onValueChange = {
-                    startLocation.value = it
-                })
+                OutlinedTextField(modifier = Modifier
+                    .fillMaxWidth(),
+                    supportingText = {
+                        Text(text = "Duration")
+                    },
+                    readOnly = true,
+                    maxLines = 1,
+                    value = mapStates.routesModel.duration.convertTime(),
+                    onValueChange = {})
 
-            OutlinedTextField(modifier = Modifier
-                .fillMaxWidth(),
-                supportingText = {
-                    Text(text = "End Coordinates")
-                },
-                readOnly = true,
-                maxLines = 1,
-                value = endLocation.value,
-                onValueChange = {
-                    endLocation.value = it
-                })
+            } else {
+                Text(
+                    modifier = Modifier
+                        .fillMaxWidth(),
+                    text = "Tap inside the map to input coordinates"
+                )
+
+                OutlinedTextField(modifier = Modifier
+                    .fillMaxWidth(),
+                    supportingText = {
+                        Text(text = "Start Coordinates")
+                    },
+                    readOnly = true,
+                    maxLines = 1,
+                    value = startLocation.value,
+                    onValueChange = {
+                        startLocation.value = it
+                    })
+
+                OutlinedTextField(modifier = Modifier
+                    .fillMaxWidth(),
+                    supportingText = {
+                        Text(text = "End Coordinates")
+                    },
+                    readOnly = true,
+                    maxLines = 1,
+                    value = endLocation.value,
+                    onValueChange = {
+                        endLocation.value = it
+                    })
+            }
+
 
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -204,7 +242,9 @@ fun PlottingScreen(mainViewModel: MainViewModel) {
                             startLocation.value = ""
                             endLocation.value = ""
 
-                            //clear all overlays
+                            isPlotted.value = false
+
+                            //clear all overlay
                             mapsManager.clearMarkersFromMap(true)
 
                             mainViewModel.clearPolyline()

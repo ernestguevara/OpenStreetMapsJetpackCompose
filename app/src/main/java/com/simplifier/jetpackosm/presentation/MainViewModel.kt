@@ -82,6 +82,7 @@ class MainViewModel : ViewModel() {
 
                 _mapStates.value = _mapStates.value.copy(
                     routesModel = mapsRepository.getRoutes(finalCoordinates),
+                    stationIndex = index,
                     isError = false,
                     loading = false,
                     errorMessage = ""
